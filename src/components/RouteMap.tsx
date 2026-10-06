@@ -13,6 +13,20 @@ function BboxTracker({onBboxChange}) { //
     return null
 }
 
+function BboxCenter({onCenterChange, savedCenter}) {
+  const map = useMapEvents(
+    {
+      moveend: () => {
+        onCenterChange({center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: 20})
+      },
+    })
+    useEffect(() => {
+      map.setView(savedCenter.center, savedCenter.zoom)
+      console.log('BboxCenter MOUNTED')
+    },[])
+    return null
+}
+
 function PinPoint({ PointOnTheMap}) {          //получение кординатов точки на карте принажатии мышью
   const point = useMapEvents(
     {
@@ -25,9 +39,15 @@ function PinPoint({ PointOnTheMap}) {          //получение кордин
 
 function RouteMap () {
 
-  const [bbox,setBbox] = useState('')
+  const [bbox, setBbox] = useState('')
   const [points, setPoints] = useState([])
   const [route, setRoute] = useState('')
+  const [bcenter, setCenter] = useState({
+        center: [ 45.385044, 45.486671],
+        zoom: 15
+  })
+
+  console.log(bcenter)
 
   const mapOptions = {
         center: [ 45.385044, 45.486671],
@@ -72,12 +92,13 @@ function RouteMap () {
     <>
         <MapContainer {...mapOptions} style = {{width: "100%", height: "500px"}}>
           <BboxTracker onBboxChange={setBbox} />
+          <BboxCenter onCenterChange={setCenter} savedCenter={bcenter}/>
           <PinPoint PointOnTheMap={addPoint}/>
           {points.map((item, index) => (
             <Marker key = {index} position = {item}/>
           ))}
           <Polyline positions={arrForPolyline()}/>
-          <TileLayer url = `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${mapToken}`/>
+          <TileLayer url={`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${mapToken}`}/>
         </MapContainer>
         <button onClick={getDirections}>Построить маршрут</button>
     </>
