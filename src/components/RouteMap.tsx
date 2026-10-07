@@ -17,13 +17,18 @@ function BboxCenter({onCenterChange, savedCenter}) {
   const map = useMapEvents(
     {
       moveend: () => {
-        onCenterChange({center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: 20})
+        let centerLatLng = {center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: 20}
+        onCenterChange(centerLatLng)
+        sessionStorage.setItem('center', JSON.stringify(centerLatLng))
       },
     })
     useEffect(() => {
-      map.setView(savedCenter.center, savedCenter.zoom)
-      console.log('BboxCenter MOUNTED')
-    },[])
+      if (sessionStorage.getItem('center')) {
+        map.setView(JSON.parse(sessionStorage.getItem('center')).center, JSON.parse(sessionStorage.getItem('center')).zoom)
+      } else {
+       map.setView([ 45.385044, 45.486671], 15)
+      }
+    }, [])
     return null
 }
 
@@ -86,7 +91,6 @@ function RouteMap () {
       return route.routes[0].geometry.coordinates.map(it => [it[1], it[0]])
     } return []
   }
-
 
   return (
     <>
