@@ -17,7 +17,7 @@ function BboxCenter({onCenterChange, savedCenter}) {
   const map = useMapEvents(
     {
       moveend: () => {
-        let centerLatLng = {center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: 20}
+        let centerLatLng = {center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: map.getZoom()}
         onCenterChange(centerLatLng)
         sessionStorage.setItem('center', JSON.stringify(centerLatLng))
       },
@@ -52,7 +52,6 @@ function RouteMap () {
         zoom: 15
   })
 
-  console.log(bcenter)
 
   const mapOptions = {
         center: [ 45.385044, 45.486671],
