@@ -32,10 +32,13 @@ function BboxCenter({onCenterChange, savedCenter}) {
     return null
 }
 
-function PinPoint({ PointOnTheMap}) {          //получение кординатов точки на карте принажатии мышью
+function PinPoint({ PointOnTheMap, savedPoints }) {  //получение кординатов точки на карте принажатии мышью
   const point = useMapEvents(
     {
-      click: (e) => { PointOnTheMap({lat: e.latlng.lat, lng: e.latlng.lng})}
+      click: (e) => {
+        let mapDot = {lat: e.latlng.lat, lng: e.latlng.lng}
+        PointOnTheMap(mapDot)
+      }
     }
   )
   return null
@@ -44,14 +47,22 @@ function PinPoint({ PointOnTheMap}) {          //получение кордин
 
 function RouteMap () {
 
+function readSavedPoints() {
+  console.log('rendering from lazy state function', sessionStorage.getItem('mapPoints'))
+  if(JSON.parse(sessionStorage.getItem('mapPoints'))) {
+    return JSON.parse(sessionStorage.getItem('mapPoints'))
+  } else {
+    return []
+  }
+}
+
   const [bbox, setBbox] = useState('')
-  const [points, setPoints] = useState([])
+  const [points, setPoints] = useState(readSavedPoints)
   const [route, setRoute] = useState('')
   const [bcenter, setCenter] = useState({
         center: [ 45.385044, 45.486671],
         zoom: 15
   })
-
 
   const mapOptions = {
         center: [ 45.385044, 45.486671],
@@ -61,6 +72,7 @@ function RouteMap () {
   function addPoint(newPoint) {
     const arrPoints = [...points, newPoint]
     setPoints(arrPoints)
+    sessionStorage.setItem('mapPoints', JSON.stringify(arrPoints))
   }
 
 
@@ -96,7 +108,7 @@ function RouteMap () {
         <MapContainer {...mapOptions} style = {{width: "100%", height: "500px"}}>
           <BboxTracker onBboxChange={setBbox} />
           <BboxCenter onCenterChange={setCenter} savedCenter={bcenter}/>
-          <PinPoint PointOnTheMap={addPoint}/>
+          <PinPoint PointOnTheMap={addPoint} />
           {points.map((item, index) => (
             <Marker key = {index} position = {item}/>
           ))}
@@ -104,6 +116,8 @@ function RouteMap () {
           <TileLayer url={`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${mapToken}`}/>
         </MapContainer>
         <button onClick={getDirections}>Построить маршрут</button>
+        <button onClick={getDirections}>Удалить маршрут</button>
+        <button onClick={getDirections}>Сохранить маршрут</button>
     </>
   )
 }
