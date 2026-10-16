@@ -1,8 +1,5 @@
-import { TileLayer, useMapEvents, Marker, Polyline} from "react-leaflet";
-import 'leaflet/dist/leaflet.css'
 import mapboxgl from 'mapbox-gl'
 import { useEffect, useState, useRef } from "react";
-import { map } from "leaflet";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './App.css'
 const mapToken = import.meta.env.VITE_MAPBOX_TOKEN
@@ -12,11 +9,11 @@ function RouteMap () {
 
   const mapRef = useRef()
   const mapContainerRef = useRef()
-
+  const markerRef = useRef([])
   const [markers, setMarkers] = useState([])
-  const [marker, setMarker] = useState('')
   const [center, setCenter] = useState(centerTracker)
   const [zoom, setZoom] = useState(zoomTracker)
+  const [route, setRoute] = useState('')
 
   useEffect(() => {
 
@@ -36,21 +33,19 @@ function RouteMap () {
 
     mapRef.current.on('click', (e) => {
       setMarkers(prevMarkers => [...prevMarkers, [e.lngLat.lng, e.lngLat.lat]])
-      setMarker([e.lngLat.lng, e.lngLat.lat])
+
+      markerRef.current = [...markerRef.current, new mapboxgl.Marker({ color: 'pink' })
+      .setLngLat([e.lngLat.lng, e.lngLat.lat])
+      .addTo(mapRef.current)]
     })
+
 
     return () => {
       mapRef.current.remove()
     }
   }, [])
+  console.log(markerRef.current)
 
-  if (marker) {
-  new mapboxgl.Marker({ color: 'pink' })
-    .setLngLat(marker)
-    .addTo(mapRef.current)
-  } else {
-    console.log('нет точек')
-  }
 
   function centerTracker() {
     if(sessionStorage.getItem('mapCenter')) {
@@ -67,12 +62,55 @@ function RouteMap () {
     }
   }
 
+  async function getDirection() {
+
+    if (markers.length > 1) {
+    const direction = await fetch(
+      `https://api.mapbox.com/directions/v5/mapbox/walking/${markers.join(';')}?geometries=geojson&access_token=${mapToken}`,
+      {method: 'GET'}
+    )
+    const json = await direction.json()
+    setRoute(json)
+    const data = json.routes[0]
+    const geojson = {
+      'type' : 'Feature',
+      'properties' : {},
+      'geometry' : data.geometry
+    }
+    if (mapRef.current.getSource('route')) {
+    mapRef.current.getSource('route').setData(geojson);
+    } else {
+      mapRef.current.addLayer({
+      id: 'route',
+      type: 'line',
+      source: {
+        type: 'geojson',
+        data: geojson
+      },
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#3887be',
+        'line-width': 5,
+        'line-opacity': 0.75
+      }
+      });
+    }
+  } else {
+    console.log('всего одна точка')
+  }
+  }
+
+
   return (
     <>
     <div className="sidebar">
         Longitude: {center[0].toFixed(4)} | Latitude: {center[1].toFixed(4)} | Zoom: {zoom.toFixed(2)}
     </div>
       <div id='map-container' ref={mapContainerRef}></div>
+      <button onClick={getDirection}>Построить маршрут</button>
     </>
   )
 }
