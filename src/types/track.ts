@@ -14,12 +14,16 @@ interface TrackDay {
   spring: boolean
 }
 
-interface RoutePoint {
+export interface RouteMarker {
   id: number;
   track_id: numder;
   lat: number;
   lng: number;
-  order: number
+  order: number;
+  description: string;
+  photo: object;
+  recall: string;
+  archived: boolean
 }
 
 interface TrackWithDetails extends Track {

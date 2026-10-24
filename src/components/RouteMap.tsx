@@ -2,6 +2,7 @@ import mapboxgl from 'mapbox-gl'
 import { useEffect, useState, useRef } from "react";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './App.css'
+import type {RouteMarker} from '..types/track'
 const mapToken = import.meta.env.VITE_MAPBOX_TOKEN
 
 
@@ -10,10 +11,13 @@ function RouteMap () {
   const mapRef = useRef()
   const mapContainerRef = useRef()
   const markerRef = useRef([])
-  const [markers, setMarkers] = useState([])
+  const marker= useRef(null)
   const [center, setCenter] = useState(centerTracker)
+  const [markers, setMarkers] = useState<RouteMarker[]>([])
   const [zoom, setZoom] = useState(zoomTracker)
   const [route, setRoute] = useState('')
+  const [eventMessage, setEventMessage] = useState('Hover or click the marker');
+  const resetTimeout = useRef(null);
 
   useEffect(() => {
 
@@ -32,11 +36,41 @@ function RouteMap () {
     })
 
     mapRef.current.on('click', (e) => {
-      setMarkers(prevMarkers => [...prevMarkers, [e.lngLat.lng, e.lngLat.lat]])
+      let markerID = {
+          id: Date.now(),
+          track_id: 0,
+          lat: e.lngLat.lat,
+          lng: e.lngLat.lng,
+          order: 1,
+          description: '',
+          photo: [],
+          recall: '',
+          archived: false
+       }
+      const coord = [e.lngLat.lng, e.lngLat.lat]
+      setMarkers(prevMarkers => [...prevMarkers, markerID])
+      marker.current = new mapboxgl.Marker({ color: 'pink' })
+      .setLngLat(coord)
+      .addTo(mapRef.current)
+      markerRef.current = [...markerRef.current, [coord]]
 
-      markerRef.current = [...markerRef.current, new mapboxgl.Marker({ color: 'pink' })
-      .setLngLat([e.lngLat.lng, e.lngLat.lat])
-      .addTo(mapRef.current)]
+      const markerElement = marker.current.getElement();
+
+      const handleMouseEnter = () => {
+        markerElement.style.cursor = 'pointer'
+      }
+      const handleMouseLeave = () => {
+        markerElement.style.cursor = ""
+      }
+
+      markerElement.addEventListener('mouseenter', handleMouseEnter);
+      markerElement.addEventListener('mouseleave', handleMouseLeave);
+      return () => {
+        markerElement.removeEventListener('mouseenter', handleMouseEnter )
+        markerElement.removeEventListener('mouseleave', handleMouseLeave )
+        marker.current.remove()
+        mapRef.current.remove()
+      }
     })
 
 
@@ -44,7 +78,7 @@ function RouteMap () {
       mapRef.current.remove()
     }
   }, [])
-  console.log(markerRef.current)
+
 
 
   function centerTracker() {
@@ -64,15 +98,15 @@ function RouteMap () {
 
   async function getDirection() {
 
-    if (markers.length > 1) {
+    if (markerRef.current.length > 1) {
     const direction = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/walking/${markers.join(';')}?geometries=geojson&access_token=${mapToken}`,
+      `https://api.mapbox.com/directions/v5/mapbox/walking/${markerRef.current.map(it => it[0]).join(';')}?geometries=geojson&access_token=${mapToken}`,
       {method: 'GET'}
     )
     const json = await direction.json()
     setRoute(json)
     const data = json.routes[0]
-    const geojson = {
+      const geojson = {
       'type' : 'Feature',
       'properties' : {},
       'geometry' : data.geometry
@@ -100,169 +134,38 @@ function RouteMap () {
     }
   } else {
     console.log('всего одна точка')
+    }
   }
-  }
-
 
   return (
     <>
-    <div className="sidebar">
-        Longitude: {center[0].toFixed(4)} | Latitude: {center[1].toFixed(4)} | Zoom: {zoom.toFixed(2)}
-    </div>
+    {/* <div className="sidebar">
+        Distance: {getData().distance.toFixed(3)} km | Duration: {getData().duration.toFixed(3)} min
+    </div> */}
       <div id='map-container' ref={mapContainerRef}></div>
+       <div
+        style={{
+          font: "bold 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif",
+          backgroundColor: '#3386c0',
+          color: '#fff',
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          zIndex: 1,
+          width: '200px',
+          marginLeft: '-100px',
+          display: 'block',
+          padding: '10px 20px',
+          borderRadius: '3px',
+          textAlign: 'center'
+        }}
+      >
+        {eventMessage}
+      </div>
       <button onClick={getDirection}>Построить маршрут</button>
+      <button onClick={getDirection}>Удалить точку</button>
     </>
   )
 }
 
  export default RouteMap
-
-
-
-
-
-// import { MapContainer, TileLayer, useMapEvents, Marker, Polyline} from "react-leaflet";
-// import 'leaflet/dist/leaflet.css'
-// import mapboxgl from 'mapbox-gl'
-// import { useEffect, useState, useRef } from "react";
-// import { map } from "leaflet";
-// import 'mapbox-gl/dist/mapbox-gl.css';
-// import './App.css'
-// const mapToken = import.meta.env.VITE_MAPBOX_TOKEN
-
-// function BboxTracker({onBboxChange}) { //
-//     const map = useMapEvents(
-//     {
-//       moveend: () => { onBboxChange(map.getBounds().toBBoxString()) },
-//       zoomend: () => { onBboxChange(map.getBounds().toBBoxString()) }
-//     })
-//     return null
-// }
-
-// function BboxCenter({onCenterChange, savedCenter}) {
-//   const map = useMapEvents(
-//     {
-//       moveend: () => {
-//         let centerLatLng = {center: [map.getBounds().getCenter().lat, map.getBounds().getCenter().lng], zoom: map.getZoom()}
-//         onCenterChange(centerLatLng)
-//         sessionStorage.setItem('center', JSON.stringify(centerLatLng))
-//       },
-//     })
-//     useEffect(() => {
-//       if (sessionStorage.getItem('center')) {
-//         map.setView(JSON.parse(sessionStorage.getItem('center')).center, JSON.parse(sessionStorage.getItem('center')).zoom)
-//       } else {
-//        map.setView([ 45.385044, 45.486671], 15)
-//       }
-//     }, [])
-//     return null
-// }
-
-// function PinPoint({ PointOnTheMap, savedPoints }) {  //получение кординатов точки на карте принажатии мышью
-//   const point = useMapEvents(
-//     {
-//       click: (e) => {
-//         let mapDot = {lat: e.latlng.lat, lng: e.latlng.lng}
-//         PointOnTheMap(mapDot)
-//       }
-//     }
-//   )
-//   return null
-// }
-
-
-//function RouteMap () {
-
-
-  // const [bbox, setBbox] = useState('')
-  // const [points, setPoints] = useState(readSavedPoints)
-  // const [route, setRoute] = useState('')
-  // const [bcenter, setCenter] = useState({
-  //       center: [ 45.385044, 45.486671],
-  //       zoom: 15
-  // })
-
-  // const mapOptions = {
-  //       center: [ 45.385044, 45.486671],
-  //       zoom: 15
-  // }
-
-//   function readSavedPoints() {
-//   if(JSON.parse(sessionStorage.getItem('mapPoints'))) {
-//     return JSON.parse(sessionStorage.getItem('mapPoints'))
-//   } else {
-//     return []
-//   }
-// }
-
-// function clearLocalStorage () {
-//   sessionStorage.removeItem('mapPoints')
-// }
-
-//   function addPoint(newPoint) {
-//     const arrPoints = [...points, newPoint]
-//     setPoints(arrPoints)
-//     sessionStorage.setItem('mapPoints', JSON.stringify(arrPoints))
-//   }
-
-
-//   function arrGeoJson(points) {
-//     let arr = []
-//     let str = ''
-//        for (let i = 0; i < points.length; i++) {
-//           str = `${points[i].lng},${points[i].lat}`
-//           arr = [...arr, str]
-//         }
-//     return arr.join(';')
-//    }
-
-//   async function getDirections() {
-
-//     const queryRoute = await fetch(
-//       `https://api.mapbox.com/directions/v5/mapbox/walking/${arrGeoJson(points)}?geometries=geojson&access_token=${mapToken}`,
-//       {method: 'GET'}
-//     )
-
-//     setRoute(await queryRoute.json())
-
-//     }
-
-//   function arrForPolyline() {
-//     if (route.routes && route.routes.length > 0) {
-//       return route.routes[0].geometry.coordinates.map(it => [it[1], it[0]])
-//     } return []
-//   }
-
-
-//   return (
-//     <>
-//         <MapContainer {...mapOptions} style = {{width: "100%", height: "500px"}}>
-//           <BboxTracker onBboxChange={setBbox} />
-//           <BboxCenter onCenterChange={setCenter} savedCenter={bcenter}/>
-//           <PinPoint PointOnTheMap={addPoint} />
-//           {points.map((item, index) => (
-//             <Marker key = {index} position = {item}/>
-//           ))}
-//           <Polyline positions={arrForPolyline()}/>
-//           <TileLayer url={`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${mapToken}`} zoomOffset = {-1} tileSize = {512} />
-//         </MapContainer>
-//         <button onClick={getDirections}>Построить маршрут</button>
-//         <button onClick={clearLocalStorage}>Удалить точки</button>
-//         <button onClick={getDirections}>Сохранить маршрут</button>
-//     </>
-//   )
-//}
-
-
-
-//export default RouteMap
-
-
-
-
-
-
-
-
-
-
