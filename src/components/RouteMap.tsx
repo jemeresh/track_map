@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './App.css'
 import type { RouteMarker } from '../types/track'
+import { idText } from 'typescript';
 const mapToken = import.meta.env.VITE_MAPBOX_TOKEN
 
 
@@ -16,6 +17,9 @@ function RouteMap() {
   const [markers, setMarkers] = useState<RouteMarker[]>([])
   const [zoom, setZoom] = useState(zoomTracker)
   const [route, setRoute] = useState('')
+  // const [selectedId, setSelectedId] = useRef(null)
+  // const [panelMode, setPAnelMode] = useRef(null)
+
 
   useEffect(() => {
 
@@ -34,6 +38,7 @@ function RouteMap() {
     })
 
     mapRef.current.on('click', (e) => {
+
       let markerID = {
         id: Date.now(),
         track_id: 0,
@@ -45,6 +50,7 @@ function RouteMap() {
         recall: '',
         archived: false
       }
+
       const coord = [e.lngLat.lng, e.lngLat.lat]
 
       setMarkers(prevMarkers => [...prevMarkers, markerID])
@@ -53,18 +59,23 @@ function RouteMap() {
 
       if (target instanceof Element) {
         const markerT = target.closest('.mapboxgl-marker')
+
+
         if (markerT == null) {
 
           marker.current = new mapboxgl.Marker({ color: 'pink' })
             .setLngLat(coord)
             .addTo(mapRef.current)
 
-            markerRef.current = [...markerRef.current, [coord]]
+          const newMarker = marker.current
+
+          markerRef.current = [...markerRef.current, [coord]]
 
           const markerElement = marker.current.getElement();
 
           const handleMouseEnter = () => {
             markerElement.style.cursor = 'pointer'
+
           }
           const handleMouseLeave = () => {
             markerElement.style.cursor = ""
@@ -73,19 +84,39 @@ function RouteMap() {
           const handleClick = () => {
             new mapboxgl.Popup({ closeOnClick: false })
               .setLngLat(coord)
-              .setHTML('<button onClick={getDirection}>Построить маршрут</button>')
+              .setDOMContent(Del)
               .addTo(mapRef.current)
           }
 
           markerElement.addEventListener('mouseenter', handleMouseEnter)
           markerElement.addEventListener('mouseleave', handleMouseLeave)
           markerElement.addEventListener('click', handleClick)
+
+          const Del = document.createElement('button')
+          Del.textContent = 'Удалить'
+          Del.addEventListener('click', () => {
+            newMarker.remove()
+          })
+          parentElement.body.appendChild(Del)
+
         } else {
           return () => {
           }
         }
+
+
+        // const Desc = document.createElement('button')
+        // Desc.textContent = 'Описание'
+        // Desc.addEventListener('click', () => {
+        //   console.log('Описание маркера')
+        // })
+        // parentElement.body.appendChild(Desc)
+
+        // const mapEl = target.closest('.mapboxgl-canvas')
+
       }
     })
+
     return () => {
       mapRef.current.remove()
     }
@@ -148,6 +179,7 @@ function RouteMap() {
     }
   }
 
+
   return (
     <>
       {/* <div className="sidebar">
@@ -155,7 +187,6 @@ function RouteMap() {
     </div> */}
       <div id='map-container' ref={mapContainerRef}></div>
       <button onClick={getDirection}>Построить маршрут</button>
-      <button onClick={getDirection}>Удалить точку</button>
     </>
   )
 }
