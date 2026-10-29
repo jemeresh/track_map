@@ -17,6 +17,7 @@ function RouteMap() {
   const [markers, setMarkers] = useState<RouteMarker[]>([])
   const [zoom, setZoom] = useState(zoomTracker)
   const [route, setRoute] = useState('')
+  const [value, setValue] = useState('')
   // const [selectedId, setSelectedId] = useRef(null)
   // const [panelMode, setPAnelMode] = useRef(null)
 
@@ -60,7 +61,6 @@ function RouteMap() {
       if (target instanceof Element) {
         const markerT = target.closest('.mapboxgl-marker')
 
-
         if (markerT == null) {
 
           marker.current = new mapboxgl.Marker({ color: 'pink' })
@@ -68,6 +68,28 @@ function RouteMap() {
             .addTo(mapRef.current)
 
           const newMarker = marker.current
+
+          const mapEl = target.closest('.mapboxgl-canvas')
+          const Del = document.createElement('button')
+          Del.textContent = 'Удалить'
+          Del.addEventListener('click', () => {
+            newMarker.remove()
+          })
+
+        const Desc = document.createElement('button')
+        Desc.textContent = 'Описание'
+        Desc.addEventListener('click', () => {
+          handleChange()
+        })
+          //document.body.appendChild(Desc)
+
+          const container = document.createElement('block')
+
+          container.append(Desc, Del)
+
+          newMarker.setPopup(new mapboxgl.Popup({ closeOnClick: false })
+              .setDOMContent(container)
+          )
 
           markerRef.current = [...markerRef.current, [coord]]
 
@@ -81,39 +103,17 @@ function RouteMap() {
             markerElement.style.cursor = ""
           }
 
-          const handleClick = () => {
-            new mapboxgl.Popup({ closeOnClick: false })
-              .setLngLat(coord)
-              .setDOMContent(Del)
-              .addTo(mapRef.current)
+          const handleChange = () => {
+            <textarea></textarea>
           }
 
           markerElement.addEventListener('mouseenter', handleMouseEnter)
           markerElement.addEventListener('mouseleave', handleMouseLeave)
-          markerElement.addEventListener('click', handleClick)
-
-          const Del = document.createElement('button')
-          Del.textContent = 'Удалить'
-          Del.addEventListener('click', () => {
-            newMarker.remove()
-          })
-          parentElement.body.appendChild(Del)
 
         } else {
           return () => {
           }
         }
-
-
-        // const Desc = document.createElement('button')
-        // Desc.textContent = 'Описание'
-        // Desc.addEventListener('click', () => {
-        //   console.log('Описание маркера')
-        // })
-        // parentElement.body.appendChild(Desc)
-
-        // const mapEl = target.closest('.mapboxgl-canvas')
-
       }
     })
 
